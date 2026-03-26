@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard | AI Attendance</title>
+  
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+
+  <style>
+    :root {
+      --primary: #00d2ff;
+      --accent: #009ec1;
+      --bg-dark: #0f0c29;
+      --glass: rgba(255, 255, 255, 0.05);
+      --glass-border: rgba(255, 255, 255, 0.15);
+      --text: #ffffff;
+      --danger: #ff4757;
+      --success: #10b981;
+      --warning: #f1c40f;
+      --neutral: #94a3b8;
+    }
+
+    body { 
+      margin: 0; font-family: 'Poppins', sans-serif; display: flex; 
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: var(--text); height: 100vh; overflow: hidden; 
+    }
+    
+    .sidebar { width: 260px; background: rgba(0, 0, 0, 0.3); backdrop-filter: blur(10px); border-right: 1px solid var(--glass-border); padding: 30px 20px; display: flex; flex-direction: column; }
+    .sidebar h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 40px; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+    .nav-item { padding: 14px 18px; cursor: pointer; color: rgba(255,255,255,0.6); transition: all 0.3s ease; border-radius: 12px; margin-bottom: 10px; display: flex; align-items: center; font-weight: 500; gap: 12px; }
+    .nav-item:hover, .nav-item.active { background: var(--glass); color: var(--primary); }
+    .nav-item.active { background: rgba(0, 210, 255, 0.1); border: 1px solid rgba(0, 210, 255, 0.3); }
+
+    .logout-btn { margin-top: auto; color: var(--danger); background: rgba(255, 71, 87, 0.1); text-align: center; padding: 12px; border-radius: 12px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; }
+
+    .main { flex: 1; padding: 40px; overflow-y: auto; }
+    .header-title { margin-bottom: 35px; }
+    .view-section { display: none; }
+    .view-section.active { display: block; animation: fadeIn 0.5s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .stats-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 30px; }
+    .stat-card { background: var(--glass); padding: 20px; border-radius: 15px; border: 1px solid var(--glass-border); text-align: center; }
+    .stat-card h1 { margin: 5px 0 0; font-size: 2rem; font-weight: 700; }
+    .stat-card p { margin: 0; color: rgba(255,255,255,0.4); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; }
+
+    .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .analytic-card { background: var(--glass); padding: 30px; border-radius: 20px; border: 1px solid var(--glass-border); display: flex; flex-direction: column; align-items: center; }
+    
+    .circle-chart { width: 150px; height: 150px; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; margin-bottom: 15px; }
+    .circle-chart::before { content: ""; position: absolute; width: 120px; height: 120px; background: #1e1b4b; border-radius: 50%; }
+    .circle-chart span { position: relative; font-size: 1.8rem; font-weight: 700; color: var(--success); }
+
+    .status-bar-container { width: 100%; }
+    .status-bar-item { margin-bottom: 15px; }
+    .status-label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 5px; }
+    .bar-bg { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; }
+    .bar-fill { height: 100%; width: 0%; transition: width 0.5s ease; border-radius: 10px; }
+
+    .card { background: var(--glass); padding: 25px; border-radius: 20px; border: 1px solid var(--glass-border); margin-bottom: 30px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 15px; color: rgba(255,255,255,0.4); font-size: 0.8rem; border-bottom: 1px solid var(--glass-border); }
+    td { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem; }
+
+    .status-select { background: rgba(255, 255, 255, 0.1); border: 1px solid var(--glass-border); color: white; padding: 8px; border-radius: 8px; cursor: pointer; width: 100%; max-width: 150px; }
+    .status-select option { background: #1a1a2e; }
+
+    .video-wrapper { position: relative; width: 100%; border-radius: 20px; overflow: hidden; background: #000; border: 2px solid var(--primary); aspect-ratio: 4/3; }
+    video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+    .btn-submit { width: 100%; padding: 15px; background: var(--primary); color: #0f0c29; border: none; border-radius: 12px; cursor: pointer; font-weight: 700; margin-top: 15px; }
+    input { width: 100%; padding: 12px 16px; border: 1px solid var(--glass-border); border-radius: 12px; background: rgba(255,255,255,0.05); color: white; margin-bottom: 10px; box-sizing: border-box; }
+  </style>
+</head>
+
+<body>
+
+<div class="sidebar">
+  <h2><i class='bx bxs-bolt-circle'></i> Portal</h2>
+  <div class="nav-item active" onclick="showView('dashboard', this)">
+    <i class='bx bxs-pie-chart-alt-2'></i> Analytics
+  </div>
+  <div class="nav-item" onclick="showView('management', this)">
+    <i class='bx bxs-user-detail'></i> Employee List
+  </div>
+  <div class="nav-item" onclick="showView('leave-manager', this)">
+    <i class='bx bxs-calendar-check'></i> Leave Requests
+  </div>
+  <div class="nav-item" onclick="showView('register', this)">
+    <i class='bx bxs-user-plus'></i> Add Employee
+  </div>
+  <a class="logout-btn" onclick="logout()">
+    <i class='bx bx-power-off'></i> Sign Out
+  </a>
+</div>
+
+<div class="main">
+  <div id="dashboard" class="view-section active">
+    <div class="header-title"><h1>System Analytics</h1><p>Today's Overview</p></div>
+    <div class="stats-container">
+      <div class="stat-card"><p>Total Staff</p><h1 id="count-total">0</h1></div>
+      <div class="stat-card" style="border-bottom: 3px solid var(--success);"><p>Present</p><h1 id="count-present">0</h1></div>
+      <div class="stat-card" style="border-bottom: 3px solid var(--warning);"><p>On Leave</p><h1 id="count-leave">0</h1></div>
+      <div class="stat-card" style="border-bottom: 3px solid var(--primary);"><p>Pending</p><h1 id="count-pending">0</h1></div>
+      <div class="stat-card" style="border-bottom: 3px solid var(--danger);"><p>Absent</p><h1 id="count-absent">0</h1></div>
+    </div>
+
+    <div class="analytics-grid">
+      <div class="analytic-card">
+        <h3>Attendance Rate</h3>
+        <div class="circle-chart" id="rate-circle"><span id="rate-percent">0%</span></div>
+      </div>
+      <div class="analytic-card">
+        <h3>Distribution</h3>
+        <div class="status-bar-container">
+          <div class="status-bar-item">
+            <div class="status-label"><span>Present</span><span id="label-present">0%</span></div>
+            <div class="bar-bg"><div class="bar-fill" id="bar-present" style="background: var(--success);"></div></div>
+          </div>
+          <div class="status-bar-item">
+            <div class="status-label"><span>On Leave</span><span id="label-leave">0%</span></div>
+            <div class="bar-bg"><div class="bar-fill" id="bar-leave" style="background: var(--warning);"></div></div>
+          </div>
+          <div class="status-bar-item">
+            <div class="status-label"><span>Absent/Pending</span><span id="label-absent">0%</span></div>
+            <div class="bar-bg"><div class="bar-fill" id="bar-absent" style="background: var(--danger);"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="management" class="view-section">
+    <div class="header-title"><h1>Employee Directory</h1></div>
+    <div class="card">
+      <table>
+        <thead><tr><th>ID</th><th>Name</th><th>Today's Status</th><th>Quick Action</th></tr></thead>
+        <tbody id="manage-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="leave-manager" class="view-section">
+    <div class="header-title"><h1>Leave Management</h1></div>
+    <div class="card"><table><thead><tr><th>Employee</th><th>Type</th><th>Dates</th><th>Reason</th><th>Actions</th></tr></thead><tbody id="leave-table"></tbody></table></div>
+  </div>
+
+  <div id="register" class="view-section">
+    <div class="header-title"><h1>Face Registration</h1></div>
+    <div class="card" style="max-width: 500px; margin: auto;">
+      <div class="video-wrapper"><video id="video" autoplay muted></video></div>
+      <p id="status" style="text-align:center;">Standby</p>
+      <input type="text" id="empId" placeholder="ID"><input type="text" id="empName" placeholder="Name">
+      <button id="registerBtn" class="btn-submit" onclick="registerFace()" disabled>Scan & Register</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAkhAO58fOpdNBn_Ls08LJ3D2FT1IXhSYE",
+  authDomain: "facerecognition-8029d.firebaseapp.com",
+  projectId: "facerecognition-8029d",
+  storageBucket: "facerecognition-8029d.firebasestorage.app",
+  messagingSenderId: "526304066871",
+  appId: "1:526304066871:web:4a141a52d275cc1d582eb2",
+  databaseURL: "https://facerecognition-8029d-default-rtdb.asia-southeast1.firebasedatabase.app/" 
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+const video = document.getElementById("video");
+const statusText = document.getElementById("status");
+const registerBtn = document.getElementById("registerBtn");
+let modelsLoaded = false;
+
+async function init() {
+  const modelURL = 'https://justadudewhohacks.github.io/face-api.js/models';
+  try {
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri(modelURL),
+      faceapi.nets.faceLandmark68Net.loadFromUri(modelURL),
+      faceapi.nets.faceRecognitionNet.loadFromUri(modelURL)
+    ]);
+    modelsLoaded = true;
+    loadStatsAndAnalytics();
+  } catch (err) { console.error(err); }
+}
+
+function showView(viewId, clickedElement) {
+  document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(viewId).classList.add('active');
+  clickedElement.classList.add('active');
+  if (viewId === 'register') startCamera(); else stopCamera();
+  if (viewId === 'management') loadManagerList();
+  if (viewId === 'leave-manager') loadLeaveRequests();
+}
+
+// FIX FOR DOUBLE DATA: Using a Status Map to only count the latest log
+function loadStatsAndAnalytics() {
+  const today = new Date().toLocaleDateString();
+  
+  db.ref("employees").on("value", snapshot => {
+    const employees = snapshot.val() || {};
+    const totalCount = Object.keys(employees).length;
+    document.getElementById("count-total").innerText = totalCount;
+
+    db.ref("attendance_logs").off(); // Clear old listeners to prevent doubling
+    db.ref("attendance_logs").on("value", logSnap => {
+      const logs = logSnap.val() || {};
+      const latestStatusMap = {};
+      const activeTodaySet = new Set();
+
+      Object.values(logs).forEach(log => {
+        if (new Date(log.time).toLocaleDateString() === today) {
+          latestStatusMap[log.name] = log.type; // Overwrites old status with newest
+          activeTodaySet.add(log.name);
+        }
+      });
+
+      let p = 0, l = 0, a = 0;
+      for (let name in latestStatusMap) {
+        let status = latestStatusMap[name];
+        if (status === "Check-In" || status === "Present") p++;
+        else if (status === "On Leave") l++;
+        else if (status === "Absent") a++;
+      }
+
+      const pend = Math.max(0, totalCount - activeTodaySet.size);
+      
+      document.getElementById("count-present").innerText = p;
+      document.getElementById("count-leave").innerText = l;
+      document.getElementById("count-absent").innerText = a;
+      document.getElementById("count-pending").innerText = pend;
+
+      if (totalCount > 0) {
+        const pRate = Math.round((p / totalCount) * 100);
+        document.getElementById("rate-percent").innerText = pRate + "%";
+        document.getElementById("rate-circle").style.background = `conic-gradient(var(--success) ${pRate}%, transparent 0%)`;
+        document.getElementById("bar-present").style.width = pRate + "%";
+        document.getElementById("label-present").innerText = pRate + "%";
+      }
+    });
+  });
+}
+
+function loadManagerList() {
+  const today = new Date().toLocaleDateString();
+  db.ref("employees").on("value", snapshot => {
+    const employees = snapshot.val() || {};
+    db.ref("attendance_logs").off(); // Clear listener
+    db.ref("attendance_logs").on("value", logSnap => {
+      const logs = logSnap.val() || {};
+      const tableBody = document.getElementById("manage-table");
+      tableBody.innerHTML = "";
+
+      Object.values(employees).forEach(emp => {
+        const empLogs = Object.values(logs).filter(l => l.name === emp.name && new Date(l.time).toLocaleDateString() === today);
+        let status = "Pending", color = "var(--primary)";
+        
+        if (empLogs.length > 0) {
+          status = empLogs[empLogs.length - 1].type; // Get latest status
+          color = (status === "Check-In" || status === "Present") ? "var(--success)" : 
+                  (status === "Check-Out") ? "var(--neutral)" : 
+                  (status === "On Leave") ? "var(--warning)" : "var(--danger)";
+        }
+
+        tableBody.innerHTML += `<tr>
+          <td>${emp.employeeId}</td>
+          <td style="font-weight:600;">${emp.name}</td>
+          <td><span style="color:${color}; font-weight:700;">● ${status}</span></td>
+          <td>
+            <select class="status-select" onchange="manualLog('${emp.name}', this.value); this.selectedIndex=0;">
+              <option value="" disabled selected>Quick Action</option>
+              <option value="Absent">Mark Absent</option>
+              <option value="Check-Out">Check-Out</option>
+            </select>
+          </td>
+        </tr>`;
+      });
+    });
+  });
+}
+
+function manualLog(name, type) {
+  db.ref("attendance_logs").push({ name, type, time: new Date().toISOString() });
+}
+
+function loadLeaveRequests() {
+  db.ref("leave_requests").on("value", snapshot => {
+    const tableBody = document.getElementById("leave-table");
+    tableBody.innerHTML = "";
+    const requests = snapshot.val() || {};
+    Object.keys(requests).forEach(key => {
+      const req = requests[key];
+      if (req.status === "Pending") {
+        tableBody.innerHTML += `<tr>
+          <td>${req.employeeName}</td><td>${req.leaveType}</td><td>${req.startDate}</td><td>${req.reason || '-'}</td>
+          <td>
+            <button onclick="updateLeaveStatus('${key}', 'Approved', '${req.employeeName}')" style="background:var(--success); color:white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;">Approve</button>
+            <button onclick="updateLeaveStatus('${key}', 'Rejected', '${req.employeeName}')" style="background:var(--danger); color:white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer; margin-left:5px;">Reject</button>
+          </td>
+        </tr>`;
+      }
+    });
+  });
+}
+
+async function updateLeaveStatus(id, status, name) {
+  await db.ref(`leave_requests/${id}`).update({ status });
+  if (status === "Approved") manualLog(name, "On Leave");
+}
+
+function startCamera() { navigator.mediaDevices.getUserMedia({ video: {} }).then(s => { video.srcObject = s; statusText.innerText = "Ready"; registerBtn.disabled = false; }); }
+function stopCamera() { if (video.srcObject) { video.srcObject.getTracks().forEach(t => t.stop()); video.srcObject = null; } }
+
+async function registerFace() {
+  const id = document.getElementById("empId").value, name = document.getElementById("empName").value;
+  if(!id || !name) return alert("Fill ID and Name");
+  const d = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+  if(!d) return alert("No face detected");
+  await db.ref("employees").push({ employeeId: id, name, descriptor: Array.from(d.descriptor), dateRegistered: new Date().toISOString() });
+  alert("Enrolled: " + name);
+}
+
+function logout() { auth.signOut().then(() => window.location.href = "login.html"); }
+window.onload = init;
+</script>
+</body>
+</html>

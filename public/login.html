@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login | Attendance System</title>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+    }
+
+    /* Glass Card Effect */
+    .card {
+      background: rgba(255, 255, 255, 0.07);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 40px;
+      border-radius: 20px;
+      width: 380px;
+      text-align: center;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+    }
+
+    .card i.main-icon {
+      font-size: 50px;
+      margin-bottom: 15px;
+      color: #00d2ff;
+    }
+
+    h2 {
+      font-weight: 600;
+      margin-bottom: 10px;
+      letter-spacing: 1px;
+    }
+
+    p.subtitle {
+      font-size: 13px;
+      opacity: 0.7;
+      margin-bottom: 30px;
+    }
+
+    /* Input Styling */
+    .input-group {
+      position: relative;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    .input-group i {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 15px 12px 45px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      color: white;
+      outline: none;
+      transition: 0.3s;
+    }
+
+    input:focus {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: #00d2ff;
+      box-shadow: 0 0 10px rgba(0, 210, 255, 0.2);
+    }
+
+    input::placeholder {
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    /* Button Styling */
+    button {
+      width: 100%;
+      padding: 14px;
+      background: #00d2ff;
+      color: #0f0c29;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+      transition: 0.3s;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background: #009ec1;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 210, 255, 0.3);
+    }
+
+    #error {
+      font-size: 13px;
+      margin-top: 15px;
+      min-height: 20px;
+      background: rgba(255, 71, 87, 0.1);
+      border-radius: 5px;
+      padding: 5px;
+      display: none; /* Hidden by default */
+    }
+
+    #error:not(:empty) {
+      display: block;
+    }
+
+    .back-link {
+      margin-top: 25px;
+      display: block;
+      text-decoration: none;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 14px;
+      transition: 0.3s;
+    }
+
+    .back-link:hover {
+      color: #00d2ff;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <i class="fas fa-lock-open main-icon"></i>
+    <h2>Admin Login</h2>
+    <p class="subtitle">Enter credentials to access dashboard</p>
+  
+    <div class="input-group">
+      <i class="fas fa-envelope"></i>
+      <input type="email" id="email" placeholder="Admin Email">
+    </div>
+
+    <div class="input-group">
+      <i class="fas fa-key"></i>
+      <input type="password" id="password" placeholder="Password">
+    </div>
+  
+    <button onclick="login()">Sign In</button>
+  
+    <p id="error" style="color:#ff4757;"></p>
+  
+    <a href="index.html" class="back-link">
+      <i class="fas fa-arrow-left"></i> Back to Home
+    </a>
+  </div>
+
+<script>
+// YOUR FIREBASE SCRIPT REMAINS UNCHANGED
+const firebaseConfig = {
+  apiKey: "AIzaSyAkhAO58fOpdNBn_Ls08LJ3D2FT1IXhSYE",
+  authDomain: "facerecognition-8029d.firebaseapp.com",
+  projectId: "facerecognition-8029d",
+  storageBucket: "facerecognition-8029d.firebasestorage.app",
+  messagingSenderId: "526304066871",
+  appId: "1:526304066871:web:4a141a52d275cc1d582eb2",
+  measurementId: "G-P8Y8XVZ2X2",
+  databaseURL: "https://facerecognition-8029d-default-rtdb.asia-southeast1.firebasedatabase.app/" 
+};
+
+firebase.initializeApp(firebaseConfig);
+
+function login() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  firebase.auth().signInWithEmailAndPassword(email, password)
+    .then((userCredential) => {
+      window.location.href = "admin.html";
+    })
+    .catch((error) => {
+      document.getElementById("error").innerText = error.message;
+    });
+}
+</script>
+
+</body>
+</html>

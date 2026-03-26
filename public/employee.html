@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employee Access | Biometric Scanner</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      --glass: rgba(255, 255, 255, 0.03);
+      --glass-border: rgba(255, 255, 255, 0.1);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    body { 
+      margin: 0; 
+      font-family: 'Inter', sans-serif; 
+      background: var(--bg-gradient);
+      height: 100vh; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center;
+      color: var(--text-main);
+      overflow: hidden;
+    }
+
+    .container {
+      background: var(--glass);
+      backdrop-filter: blur(12px);
+      padding: 40px; 
+      border-radius: 24px;
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); 
+      width: 90%; 
+      max-width: 480px; 
+      text-align: center;
+      position: relative;
+    }
+
+    h2 { font-weight: 700; font-size: 1.75rem; margin-bottom: 8px; letter-spacing: -0.025em; }
+    
+    #status { 
+      font-size: 0.85rem; 
+      color: var(--text-muted); 
+      margin-bottom: 24px; 
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    /* Video Frame Styling */
+    .video-wrapper {
+      position: relative; 
+      width: 100%; 
+      border-radius: 20px;
+      overflow: hidden; 
+      background: #000; 
+      line-height: 0;
+      border: 2px solid var(--glass-border);
+      box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+    }
+
+    /* Scanning Animation Overlay */
+    .video-wrapper::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 2px;
+      background: var(--primary);
+      box-shadow: 0 0 15px var(--primary);
+      z-index: 10;
+      animation: scan 3s linear infinite;
+    }
+
+    @keyframes scan {
+      0% { top: 0; }
+      50% { top: 100%; }
+      100% { top: 0; }
+    }
+
+    video { width: 100%; transform: scaleX(-1); }
+
+    /* Result Box Styling */
+    #result-box {
+      margin-top: 25px; 
+      padding: 18px; 
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05); 
+      border: 1px solid var(--glass-border);
+      font-weight: 600; 
+      transition: all 0.3s ease;
+    }
+
+    #result-text { font-size: 0.95rem; }
+
+    /* Success State */
+    .status-success { 
+      background: rgba(16, 185, 129, 0.1) !important; 
+      color: #34d399 !important; 
+      border-color: rgba(52, 211, 153, 0.3) !important; 
+      transform: translateY(-2px);
+    }
+
+    .back-link {
+        margin-top: 20px;
+        display: inline-block;
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 0.8rem;
+        transition: color 0.2s;
+    }
+    .back-link:hover { color: var(--text-main); }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+  <h2>Attendance Scanner</h2>
+  <p id="status"><i class='bx bx-loader-alt bx-spin'></i> Starting System...</p>
+
+  <div class="video-wrapper">
+    <video id="video" autoplay muted></video>
+  </div>
+
+  <div id="result-box">
+    <span id="result-text">Initializing Camera...</span>
+  </div>
+
+  <a href="index.html" class="back-link">← Cancel and return to home</a>
+</div>
+
+<script>
+  // --- CORE LOGIC (UNTOUCHED PER YOUR REQUEST) ---
+  const firebaseConfig = {
+    apiKey: "AIzaSyAkhAO58fOpdNBn_Ls08LJ3D2FT1IXhSYE",
+    authDomain: "facerecognition-8029d.firebaseapp.com",
+    projectId: "facerecognition-8029d",
+    storageBucket: "facerecognition-8029d.firebasestorage.app",
+    messagingSenderId: "526304066871",
+    appId: "1:526304066871:web:4a141a52d275cc1d582eb2",
+    measurementId: "G-P8Y8XVZ2X2",
+    databaseURL: "https://facerecognition-8029d-default-rtdb.asia-southeast1.firebasedatabase.app/" 
+  };
+  
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  
+  const video = document.getElementById("video");
+  const statusText = document.getElementById("status");
+  const resultText = document.getElementById("result-text");
+  const resultBox = document.getElementById("result-box");
+  
+  let isProcessing = false; 
+  
+  async function init() {
+    statusText.innerHTML = "<i class='bx bx-brain'></i> Loading AI Models...";
+    const modelURL = 'https://justadudewhohacks.github.io/face-api.js/models';
+    
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri(modelURL),
+      faceapi.nets.faceLandmark68Net.loadFromUri(modelURL),
+      faceapi.nets.faceRecognitionNet.loadFromUri(modelURL)
+    ]);
+    
+    const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+    video.srcObject = stream;
+    
+    video.onloadedmetadata = () => {
+      statusText.innerHTML = "<i class='bx bx-cloud-download'></i> Connecting to database...";
+      startRecognition();
+    };
+  }
+  
+  async function startRecognition() {
+    const snapshot = await db.ref("employees").once("value");
+    const data = snapshot.val();
+    
+    if (!data) {
+      resultText.innerText = "No employees in Database!";
+      return;
+    }
+
+    const labeledDescriptors = Object.values(data).map(user => {
+      const descArray = Object.values(user.descriptor); 
+      return new faceapi.LabeledFaceDescriptors(user.name, [new Float32Array(descArray)]);
+    });
+
+    const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
+    statusText.innerHTML = "<i class='bx bxs-check-circle' style='color:#10b981'></i> System Live";
+    resultText.innerText = "Position your face in the frame";
+
+    setInterval(async () => {
+      if (isProcessing) return; 
+
+      const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224 }))
+        .withFaceLandmarks()
+        .withFaceDescriptors();
+
+      if (detections.length > 0) {
+        const bestMatch = faceMatcher.findBestMatch(detections[0].descriptor);
+        const name = bestMatch.label;
+
+        if (name !== "unknown") {
+          isProcessing = true; 
+          
+          const todayDate = new Date().toLocaleDateString();
+          const logSnapshot = await db.ref("attendance_logs")
+            .orderByChild("name")
+            .equalTo(name)
+            .once("value");
+
+          const logs = logSnapshot.val();
+          let alreadyIn = false;
+
+          if (logs) {
+            alreadyIn = Object.values(logs).some(log => 
+              log.type === "Check-In" && new Date(log.time).toLocaleDateString() === todayDate
+            );
+          }
+
+          if (alreadyIn) {
+            resultText.innerText = `${name} already checked in. Redirecting...`;
+          } else {
+            await db.ref("attendance_logs").push({
+              name: name,
+              time: new Date().toLocaleString(),
+              type: "Check-In"
+            });
+            resultText.innerText = `Check-In Successful: ${name}`;
+          }
+
+          resultBox.className = "status-success";
+          localStorage.setItem("loggedInEmployee", name);
+
+          setTimeout(() => {
+            window.location.href = "dashboard.html"; // Ensure this page exists!
+          }, 1500);
+        } 
+      }
+    }, 1000);
+  }
+  
+  init();
+</script>
+
+</body>
+</html>

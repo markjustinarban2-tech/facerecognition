@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employee Portal | AI Attendance</title>
+  
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --bg-main: #0f172a;
+      --sidebar-bg: rgba(30, 41, 59, 0.7);
+      --card-bg: rgba(255, 255, 255, 0.03);
+      --glass-border: rgba(255, 255, 255, 0.1);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    body { 
+      margin: 0; 
+      font-family: 'Inter', sans-serif; 
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      color: var(--text-main); 
+      display: flex; 
+      height: 100vh; 
+      overflow: hidden; 
+    }
+
+    .sidebar { 
+      width: 280px; 
+      background: var(--sidebar-bg); 
+      backdrop-filter: blur(12px);
+      border-right: 1px solid var(--glass-border);
+      padding: 40px 24px; 
+      display: flex; 
+      flex-direction: column; 
+    }
+    
+    .sidebar h2 { font-size: 1.5rem; font-weight: 700; margin: 0; }
+    .sidebar p { color: var(--primary); font-size: 0.75rem; text-transform: uppercase; margin: 8px 0 40px 0; }
+
+    .nav-item { 
+      padding: 12px 16px; 
+      cursor: pointer; 
+      color: var(--text-muted);
+      transition: all 0.2s; 
+      border-radius: 10px; 
+      margin-bottom: 8px; 
+      display: flex; 
+      align-items: center; 
+      gap: 12px;
+    }
+    .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.05); color: var(--text-main); }
+    .nav-item.active { border: 1px solid var(--glass-border); background: rgba(79, 70, 229, 0.1); color: var(--primary); }
+
+    .main { flex: 1; padding: 60px; overflow-y: auto; }
+    .view-section { display: none; animation: fadeIn 0.4s ease; }
+    .view-section.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .card { 
+      background: var(--card-bg); 
+      padding: 30px; 
+      border-radius: 20px; 
+      border: 1px solid var(--glass-border);
+      max-width: 550px; 
+    }
+
+    /* Form Styling */
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; }
+    input, select, textarea {
+      width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--glass-border);
+      background: rgba(255,255,255,0.05); color: white; font-family: 'Inter';
+    }
+    input:focus, select:focus { outline: 2px solid var(--primary); }
+    option { background: #1e1b4b; color: white; }
+
+    .video-container {
+      position: relative; width: 100%; border-radius: 16px;
+      overflow: hidden; background: #000; border: 2px solid var(--glass-border);
+    }
+    video { width: 100%; transform: scaleX(-1); }
+
+    .btn { 
+      width: 100%; padding: 14px; border: none; border-radius: 12px; 
+      cursor: pointer; font-weight: 600; transition: all 0.2s;
+    }
+    .btn-primary { background: var(--primary); color: white; margin-top: 20px; }
+    .btn-logout { background: rgba(239, 68, 68, 0.1); color: #ef4444; margin-top: auto; }
+
+    #status, #leave-status { margin-top: 15px; font-size: 0.85rem; color: var(--text-muted); text-align: center; }
+  </style>
+</head>
+<body>
+
+<div class="sidebar">
+  <h2 id="welcome-name">Hello!</h2>
+  <p>Employee Portal</p>
+  
+  <div class="nav-item active" onclick="showView('home', this)">
+    <i class='bx bxs-home'></i> Overview
+  </div>
+  <div class="nav-item" onclick="showView('leave', this)">
+    <i class='bx bxs-calendar-event'></i> Request Leave
+  </div>
+  <div class="nav-item" onclick="showView('update', this)">
+    <i class='bx bxs-user-circle'></i> Update Biometrics
+  </div>
+
+  <button class="btn btn-logout" onclick="logout()">
+    <i class='bx bx-log-out'></i> Log Out
+  </button>
+</div>
+
+<div class="main">
+  <div id="home" class="view-section active">
+    <h1>Welcome Back</h1>
+    <div class="card">
+        <p>Use the sidebar to request leave or update your biometric face data.</p>
+    </div>
+  </div>
+
+  <div id="leave" class="view-section">
+    <h1>Request Leave</h1>
+    <div class="card">
+        <div class="form-group">
+            <label>Leave Type</label>
+            <select id="leave-type">
+                <option value="Sick Leave">Sick Leave</option>
+                <option value="Vacation">Vacation</option>
+                <option value="Emergency">Emergency</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div class="form-group">
+                <label>Start Date</label>
+                <input type="date" id="leave-start">
+            </div>
+            <div class="form-group">
+                <label>End Date</label>
+                <input type="date" id="leave-end">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Reason (Optional)</label>
+            <textarea id="leave-reason" rows="3" placeholder="Briefly explain..."></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="submitLeave()">Submit Request</button>
+        <p id="leave-status"></p>
+    </div>
+  </div>
+
+  <div id="update" class="view-section">
+    <h1>Biometric Update</h1>
+    <div class="card">
+        <div class="video-container">
+            <video id="video" autoplay muted></video>
+        </div>
+        <button id="updateBtn" class="btn btn-primary" onclick="reRegisterFace()" disabled>Scan & Update</button>
+        <p id="status">Initializing camera...</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAkhAO58fOpdNBn_Ls08LJ3D2FT1IXhSYE",
+  databaseURL: "https://facerecognition-8029d-default-rtdb.asia-southeast1.firebasedatabase.app/",
+  projectId: "facerecognition-8029d"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const currentEmployee = localStorage.getItem("loggedInEmployee");
+const statusText = document.getElementById("status");
+const video = document.getElementById("video");
+
+if (!currentEmployee) {
+  window.location.href = "employee.html";
+} else {
+  document.getElementById("welcome-name").innerText = "Hi, " + currentEmployee;
+}
+
+function showView(viewId, element) {
+  document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  document.getElementById(viewId).classList.add('active');
+  element.classList.add('active');
+  
+  if (viewId === 'update') {
+    initPage();
+  } else {
+    stopCamera();
+  }
+}
+
+// --- LEAVE SUBMISSION FUNCTION ---
+async function submitLeave() {
+  const type = document.getElementById("leave-type").value;
+  const start = document.getElementById("leave-start").value;
+  const end = document.getElementById("leave-end").value;
+  const reason = document.getElementById("leave-reason").value;
+  const leaveStatusText = document.getElementById("leave-status");
+
+  if (!start || !end) {
+    leaveStatusText.innerText = "❌ Please select both dates.";
+    leaveStatusText.style.color = "#ef4444";
+    return;
+  }
+
+  try {
+    await db.ref("leave_requests").push({
+      employeeName: currentEmployee,
+      leaveType: type,
+      startDate: start,
+      endDate: end,
+      reason: reason,
+      status: "Pending",
+      timestamp: new Date().toISOString()
+    });
+
+    leaveStatusText.innerText = "✅ Request submitted successfully!";
+    leaveStatusText.style.color = "#10b981";
+    
+    // Clear form
+    document.getElementById("leave-start").value = "";
+    document.getElementById("leave-end").value = "";
+    document.getElementById("leave-reason").value = "";
+  } catch (error) {
+    leaveStatusText.innerText = "❌ Error submitting request.";
+    console.error(error);
+  }
+}
+
+async function initPage() {
+  statusText.innerText = "Loading AI models...";
+  const modelURL = 'https://justadudewhohacks.github.io/face-api.js/models';
+  await Promise.all([
+    faceapi.nets.tinyFaceDetector.loadFromUri(modelURL),
+    faceapi.nets.faceLandmark68Net.loadFromUri(modelURL),
+    faceapi.nets.faceRecognitionNet.loadFromUri(modelURL)
+  ]);
+  
+  navigator.mediaDevices.getUserMedia({ video: {} })
+    .then(stream => {
+      video.srcObject = stream;
+      statusText.innerText = "Camera Ready.";
+      document.getElementById("updateBtn").disabled = false;
+    });
+}
+
+function stopCamera() {
+  if (video.srcObject) {
+    video.srcObject.getTracks().forEach(track => track.stop());
+    video.srcObject = null;
+  }
+}
+
+async function reRegisterFace() {
+  statusText.innerText = "Analyzing... hold still!";
+  const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+    .withFaceLandmarks().withFaceDescriptor();
+
+  if (!detection) {
+    statusText.innerText = "❌ No face detected. Try again!";
+    return;
+  }
+
+  const snapshot = await db.ref("employees").once("value");
+  const employees = snapshot.val();
+  let foundKey = null;
+
+  for (let key in employees) {
+    if (employees[key].name === currentEmployee) {
+      foundKey = key;
+      break;
+    }
+  }
+
+  if (foundKey) {
+    await db.ref(`employees/${foundKey}`).update({
+      descriptor: Array.from(detection.descriptor),
+      lastUpdated: new Date().toLocaleString()
+    });
+    statusText.innerText = "✅ Profile updated successfully!";
+  }
+}
+
+function logout() {
+  db.ref("attendance_logs").push({
+    name: currentEmployee,
+    time: new Date().toLocaleString(),
+    type: "Check-Out"
+  }).then(() => {
+    localStorage.removeItem("loggedInEmployee");
+    window.location.href = "index.html"; 
+  });
+}
+</script>
+</body>
+</html>
