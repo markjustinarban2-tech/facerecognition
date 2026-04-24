@@ -59,7 +59,7 @@
       gap: 6px;
     }
 
-    /* Video Frame Styling */
+   
     .video-wrapper {
       position: relative; 
       width: 100%; 
@@ -71,7 +71,7 @@
       box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
     }
 
-    /* Scanning Animation Overlay */
+    
     .video-wrapper::before {
       content: '';
       position: absolute;
@@ -90,7 +90,7 @@
 
     video { width: 100%; transform: scaleX(-1); }
 
-    /* Result Box Styling */
+    
     #result-box {
       margin-top: 25px; 
       padding: 18px; 
@@ -103,7 +103,7 @@
 
     #result-text { font-size: 0.95rem; }
 
-    /* Success State */
+    
     .status-success { 
       background: rgba(16, 185, 129, 0.1) !important; 
       color: #34d399 !important; 
@@ -141,7 +141,6 @@
 </div>
 
 <script>
-  // --- CORE LOGIC (UNTOUCHED PER YOUR REQUEST) ---
   const firebaseConfig = {
     apiKey: "AIzaSyAkhAO58fOpdNBn_Ls08LJ3D2FT1IXhSYE",
     authDomain: "facerecognition-8029d.firebaseapp.com",
@@ -244,7 +243,7 @@
           localStorage.setItem("loggedInEmployee", name);
 
           setTimeout(() => {
-            window.location.href = "dashboard.html"; // Ensure this page exists!
+            window.location.href = "dashboard.html";
           }, 1500);
         } 
       }

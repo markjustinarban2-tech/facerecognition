@@ -205,7 +205,6 @@ function showView(viewId, clickedElement) {
   if (viewId === 'leave-manager') loadLeaveRequests();
 }
 
-// FIX FOR DOUBLE DATA: Using a Status Map to only count the latest log
 function loadStatsAndAnalytics() {
   const today = new Date().toLocaleDateString();
   
@@ -214,7 +213,7 @@ function loadStatsAndAnalytics() {
     const totalCount = Object.keys(employees).length;
     document.getElementById("count-total").innerText = totalCount;
 
-    db.ref("attendance_logs").off(); // Clear old listeners to prevent doubling
+    db.ref("attendance_logs").off(); 
     db.ref("attendance_logs").on("value", logSnap => {
       const logs = logSnap.val() || {};
       const latestStatusMap = {};
@@ -222,7 +221,7 @@ function loadStatsAndAnalytics() {
 
       Object.values(logs).forEach(log => {
         if (new Date(log.time).toLocaleDateString() === today) {
-          latestStatusMap[log.name] = log.type; // Overwrites old status with newest
+          latestStatusMap[log.name] = log.type; 
           activeTodaySet.add(log.name);
         }
       });
@@ -257,7 +256,7 @@ function loadManagerList() {
   const today = new Date().toLocaleDateString();
   db.ref("employees").on("value", snapshot => {
     const employees = snapshot.val() || {};
-    db.ref("attendance_logs").off(); // Clear listener
+    db.ref("attendance_logs").off(); 
     db.ref("attendance_logs").on("value", logSnap => {
       const logs = logSnap.val() || {};
       const tableBody = document.getElementById("manage-table");
@@ -268,7 +267,7 @@ function loadManagerList() {
         let status = "Pending", color = "var(--primary)";
         
         if (empLogs.length > 0) {
-          status = empLogs[empLogs.length - 1].type; // Get latest status
+          status = empLogs[empLogs.length - 1].type; 
           color = (status === "Check-In" || status === "Present") ? "var(--success)" : 
                   (status === "Check-Out") ? "var(--neutral)" : 
                   (status === "On Leave") ? "var(--warning)" : "var(--danger)";

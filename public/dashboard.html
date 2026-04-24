@@ -204,7 +204,7 @@ function showView(viewId, element) {
   }
 }
 
-// --- LEAVE SUBMISSION FUNCTION ---
+
 async function submitLeave() {
   const type = document.getElementById("leave-type").value;
   const start = document.getElementById("leave-start").value;
@@ -232,7 +232,7 @@ async function submitLeave() {
     leaveStatusText.innerText = "✅ Request submitted successfully!";
     leaveStatusText.style.color = "#10b981";
     
-    // Clear form
+    
     document.getElementById("leave-start").value = "";
     document.getElementById("leave-end").value = "";
     document.getElementById("leave-reason").value = "";
