@@ -3,7 +3,7 @@ const statusText = document.getElementById('status');
 const registerBtn = document.getElementById('registerBtn');
 const attendanceBtn = document.getElementById('attendanceBtn');
 
-// 1. Load the AI Models from your /models folder
+
 async function init() {
     statusText.innerText = "Loading AI Models...";
     try {
@@ -14,12 +14,12 @@ async function init() {
         ]);
         startVideo();
     } catch (e) {
-        console.error(e); // This will show the exact error in the F12 Console
+        console.error(e);
         statusText.innerText = "Error loading models. Check your /models folder!";
     }
 }
 
-// 2. Turn on the Webcam
+
 function startVideo() {
     navigator.mediaDevices.getUserMedia({ video: {} })
         .then(stream => {
@@ -31,7 +31,7 @@ function startVideo() {
         .catch(err => statusText.innerText = "Camera Error: " + err);
 }
 
-// 3. Admin: Register an Employee (Save to Firebase)
+
 registerBtn.addEventListener('click', async () => {
     const name = prompt("Enter Employee Name:");
     if (!name) return;
@@ -40,7 +40,7 @@ registerBtn.addEventListener('click', async () => {
     const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
 
     if (detection) {
-        // Convert the face math (descriptor) to a regular array for Firebase
+        
         const faceArray = Array.from(detection.descriptor);
         
         firebase.database().ref('employees/').push({
@@ -55,7 +55,7 @@ registerBtn.addEventListener('click', async () => {
     }
 });
 
-// 4. Employee: Mark Attendance
+
 attendanceBtn.addEventListener('click', async () => {
     statusText.innerText = "Identifying...";
     

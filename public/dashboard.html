@@ -42,6 +42,7 @@
       padding: 40px 24px; 
       display: flex; 
       flex-direction: column; 
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
     .sidebar h2 { font-size: 1.5rem; font-weight: 700; margin: 0; }
@@ -79,7 +80,7 @@
     .form-group label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; }
     input, select, textarea {
       width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--glass-border);
-      background: rgba(255,255,255,0.05); color: white; font-family: 'Inter';
+      background: rgba(255,255,255,0.05); color: white; font-family: 'Inter'; box-sizing: border-box;
     }
     input:focus, select:focus { outline: 2px solid var(--primary); }
     option { background: #1e1b4b; color: white; }
@@ -88,7 +89,7 @@
       position: relative; width: 100%; border-radius: 16px;
       overflow: hidden; background: #000; border: 2px solid var(--glass-border);
     }
-    video { width: 100%; transform: scaleX(-1); }
+    video { width: 100%; transform: scaleX(-1); display: block; }
 
     .btn { 
       width: 100%; padding: 14px; border: none; border-radius: 12px; 
@@ -98,11 +99,63 @@
     .btn-logout { background: rgba(239, 68, 68, 0.1); color: #ef4444; margin-top: auto; }
 
     #status, #leave-status { margin-top: 15px; font-size: 0.85rem; color: var(--text-muted); text-align: center; }
+
+    /* Mobile Floating Burger Button */
+    .mobile-burger-btn {
+      display: none;
+      position: fixed;
+      top: 15px;
+      left: 15px;
+      z-index: 2001;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: white;
+      font-size: 26px;
+      padding: 8px;
+      border-radius: 10px;
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Mobile Views Optimization */
+    @media (max-width: 900px) {
+      .mobile-burger-btn { display: flex; }
+      body { display: block; overflow: auto; }
+      
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: -300px;
+        width: 260px;
+        height: 100vh;
+        z-index: 2000;
+        background: #0f172a;
+        box-shadow: 5px 0 25px rgba(0, 0, 0, 0.7);
+        box-sizing: border-box;
+      }
+      .sidebar.active { left: 0; }
+      
+      .main { padding: 85px 20px 40px 20px; width: 100%; box-sizing: border-box; }
+      .card { width: 100%; max-width: 100%; box-sizing: border-box; padding: 20px; }
+      
+      .date-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0px !important;
+      }
+    }
   </style>
 </head>
 <body>
 
-<div class="sidebar">
+<button class="mobile-burger-btn" onclick="toggleSidebar()">
+  <i class='bx bx-menu' id="burger-icon"></i>
+</button>
+
+<div class="sidebar" id="app-sidebar">
   <h2 id="welcome-name">Hello!</h2>
   <p>Employee Portal</p>
   
@@ -141,7 +194,7 @@
                 <option value="Other">Other</option>
             </select>
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+        <div class="date-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
             <div class="form-group">
                 <label>Start Date</label>
                 <input type="date" id="leave-start">
@@ -191,11 +244,26 @@ if (!currentEmployee) {
   document.getElementById("welcome-name").innerText = "Hi, " + currentEmployee;
 }
 
+function toggleSidebar() {
+  const sidebar = document.getElementById("app-sidebar");
+  const icon = document.getElementById("burger-icon");
+  sidebar.classList.toggle("active");
+  if(sidebar.classList.contains("active")) {
+    icon.className = "bx bx-x";
+  } else {
+    icon.className = "bx bx-menu";
+  }
+}
+
 function showView(viewId, element) {
   document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
   document.getElementById(viewId).classList.add('active');
   element.classList.add('active');
+  
+  if (window.innerWidth <= 900) {
+    toggleSidebar();
+  }
   
   if (viewId === 'update') {
     initPage();
@@ -231,7 +299,6 @@ async function submitLeave() {
 
     leaveStatusText.innerText = "✅ Request submitted successfully!";
     leaveStatusText.style.color = "#10b981";
-    
     
     document.getElementById("leave-start").value = "";
     document.getElementById("leave-end").value = "";
