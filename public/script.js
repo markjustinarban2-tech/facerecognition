@@ -59,7 +59,7 @@ registerBtn.addEventListener('click', async () => {
 attendanceBtn.addEventListener('click', async () => {
     statusText.innerText = "Identifying...";
     
-    // Get all registered employees from Firebase
+    
     const snapshot = await firebase.database().ref('employees/').once('value');
     const employees = snapshot.val();
 
@@ -73,12 +73,12 @@ attendanceBtn.addEventListener('click', async () => {
     if (liveDetection) {
         let matchFound = false;
         
-        // Loop through Firebase data to find a match
+        
         for (let id in employees) {
             const storedDescriptor = new Float32Array(employees[id].faceDescriptor);
             const distance = faceapi.euclideanDistance(liveDetection.descriptor, storedDescriptor);
 
-            // If distance is less than 0.6, it's the same person!
+
             if (distance < 0.6) {
                 firebase.database().ref('attendance/').push({
                     name: employees[id].name,
